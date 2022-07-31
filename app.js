@@ -3,8 +3,8 @@ const express=require('express');
 const bodyParser=require('body-parser');
 const ejs=require('ejs');
 const mongoose=require('mongoose');
-// const encrypt=require('mongoose-encryption');
-const md5=require('md5');
+const bcrypt=require('bcrypt');
+const saltRounds=10;
 
 const app=express();
 
@@ -18,8 +18,6 @@ const secretSchema=new mongoose.Schema({
       userName:String,
       password:String
 });
-
-// secretSchema.plugin(encrypt,{secret:process.env.SECRET,excludeFromEncryption: ['userName']});
 
 const User=new mongoose.model("User",secretSchema);
 
@@ -38,46 +36,46 @@ app.get("/register",function(req,res){
 });
 
 app.post("/register",function(req,res){
-      const newUser=new User({
-            userName:req.body.username,
-            password:md5(req.body.password)
-      });
-
-      // newUser.save(function(err){
-      //       if(err){
-      //             console.log(err);
-      //       }
-      //       else{
-      //             res.render("secrets");          //render secrets page only through register page
-      //       }
-      // });
-
-      User.findOne({userName:newUser.userName},function(err,foundUser){            //check if account already exists
-            if(err){
-                  console.log(err);
-            }
-            else{
-                  if(foundUser){
-                        console.log("Account already exists!");
-                        res.redirect("/register");
-                  }
-                  else{
-                        newUser.save(function(err){
-                              if(err){
-                                    console.log(err);
+      bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
+            if(!err){
+                  const newUser=new User({
+                        userName:req.body.username,
+                        password:hash
+                  });
+                  console.log(req.body.password,hash);
+                  User.findOne({userName:newUser.userName},function(err,foundUser){       //check if account already exists
+                        if(err){
+                              console.log(err);
+                        }
+                        else{
+                              if(foundUser){
+                                    console.log("Account already exists!");
+                                    res.redirect("/register");
                               }
                               else{
-                                    res.render("secrets");          //render secrets page only through register page
+                                    newUser.save(function(err){
+                                          if(err){
+                                                console.log(err);
+                                          }
+                                          else{
+                                                res.render("secrets");          //render secrets page only through register page
+                                          }
+                                    });
                               }
-                        });
-                  }
+                        }
+                  });
+            }
+            else{
+                  console.log(err);
             }
       });
+
+      
 })
 
 app.post("/login",function(req,res){
       const userName=req.body.username;
-      const password=md5(req.body.password);
+      const password=req.body.password;
 
       User.findOne({userName:userName},function(err,foundUser){
             if(err){
@@ -85,14 +83,21 @@ app.post("/login",function(req,res){
             }
             else{
                   if(foundUser){
-                        if(foundUser.password==password){
-                              console.log("Log in successful!");
-                              res.render("secrets");
-                        }
-                        else{
-                              console.log("Wrong password!!");
-                              res.redirect("/login");
-                        }
+                        bcrypt.compare(password, foundUser.password, function(err, result) {
+                              if(!err){
+                                    if(result){
+                                          res.render("secrets");
+                                          console.log("Login Successful");
+                                    }
+                                    else{
+                                          console.log("Wrong password");
+                                          res.redirect("/login");
+                                    }
+                              }
+                              else{
+                                    console.log(err);
+                              }
+                          });
                   }
             }
       });
