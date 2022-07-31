@@ -43,43 +43,43 @@ app.post("/register",function(req,res){
             password:md5(req.body.password)
       });
 
-      newUser.save(function(err){
+      // newUser.save(function(err){
+      //       if(err){
+      //             console.log(err);
+      //       }
+      //       else{
+      //             res.render("secrets");          //render secrets page only through register page
+      //       }
+      // });
+
+      User.findOne({userName:newUser.userName},function(err,foundUser){            //check if account already exists
             if(err){
                   console.log(err);
             }
             else{
-                  res.render("secrets");          //render secrets page only through register page
+                  if(foundUser){
+                        console.log("Account already exists!");
+                        res.redirect("/register");
+                  }
+                  else{
+                        newUser.save(function(err){
+                              if(err){
+                                    console.log(err);
+                              }
+                              else{
+                                    res.render("secrets");          //render secrets page only through register page
+                              }
+                        });
+                  }
             }
       });
-
-      // User.findOne({email:newUser.userName},function(err,foundUser){            //check if account already exists
-      //       // if(err){
-      //       //       console.log(err);
-      //       // }
-      //       // else{
-      //       //       if(foundUser){
-      //       //             console.log("Account already exists!");
-      //       //             res.redirect("/register");
-      //       //       }
-      //       //       else{
-      //       //             newUser.save(function(err){
-      //       //                   if(err){
-      //       //                         console.log(err);
-      //       //                   }
-      //       //                   else{
-      //       //                         res.render("secrets");          //render secrets page only through register page
-      //       //                   }
-      //       //             });
-      //       //       }
-      //       // }
-      // });
 })
 
 app.post("/login",function(req,res){
       const userName=req.body.username;
       const password=md5(req.body.password);
 
-      User.findOne({email:userName},function(err,foundUser){
+      User.findOne({userName:userName},function(err,foundUser){
             if(err){
                   console.log(err);
             }
